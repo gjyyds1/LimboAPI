@@ -1,6 +1,7 @@
 name: Java CI with Gradle
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - master
@@ -21,18 +22,6 @@ jobs:
           java-version: 21
       - name: Build LimboAPI
         run: ./gradlew build
-      - name: Upload LimboAPI
-        uses: actions/upload-artifact@v4.6.2
-        with:
-          name: LimboAPI
-          path: "*/build/libs/*.jar"
-      - uses: dev-drprasad/delete-tag-and-release@v0.2.1
-        if: ${{ github.event_name == 'push' }}
-        with:
-          delete_release: true
-          tag_name: dev-build
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Find git version
         id: git-version
         run: echo "id=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
@@ -43,7 +32,6 @@ jobs:
           output="$(find plugin/build/libs/ ! -name "*-javadoc.jar" ! -name "*-sources.jar" -type f -printf "%f\n")"
           echo "::set-output name=jarname::$output"
       - name: Release the build
-        if: ${{ github.event_name == 'push' }}
         uses: ncipollo/release-action@v1
         with:
           artifacts: plugin/build/libs/${{ steps.find-jar.outputs.jarname }}
@@ -51,17 +39,3 @@ jobs:
           prerelease: true
           name: Dev-build ${{ steps.git-version.outputs.id }}
           tag: dev-build
-      - name: Upload to Modrinth
-        if: ${{ github.event_name == 'push' }}
-        uses: RubixDev/modrinth-upload@v1.0.0
-        with:
-          token: ${{ secrets.MODRINTH_TOKEN }}
-          file_path: plugin/build/libs/${{ steps.find-jar.outputs.jarname }}
-          name: Dev-build ${{ steps.git-version.outputs.id }}
-          version: ${{ steps.git-version.outputs.id }}
-          changelog: ${{ join(github.event.commits.*.message, '\n') }}
-          game_versions: 1.7.2
-          release_type: beta
-          loaders: velocity
-          featured: false
-          project_id: TZOteSf2
